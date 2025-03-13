@@ -73,6 +73,15 @@ public class UserController {
 
     }
 
+    @PostMapping("/logout")
+    public void logout(HttpServletResponse response) {
+        Cookie cookie = new Cookie("code_token", null);
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+        cookie.setMaxAge(0); // 쿠키 삭제
+        response.addCookie(cookie);
+    }
+
     @PostMapping("/token/validation")
     @ResponseStatus(HttpStatus.OK)
     public void jwtValidate(@RequestParam String token) {
