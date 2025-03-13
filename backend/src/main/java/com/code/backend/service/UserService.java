@@ -1,5 +1,6 @@
 package com.code.backend.service;
 
+import com.code.backend.dto.SignUpUser;
 import com.code.backend.entity.User;
 import com.code.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,11 +21,11 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public User createUser(String username, String password, String email) {
+    public User createUser(SignUpUser signUpUser) {
         User user = new User();
-        user.setUsername(username);
-        user.setPassword(passwordEncoder.encode(password));
-        user.setEmail(email);
+        user.setUsername(signUpUser.getUsername());
+        user.setPassword(passwordEncoder.encode(signUpUser.getPassword()));
+        user.setEmail(signUpUser.getEmail());
         return userRepository.save(user);
     }
 

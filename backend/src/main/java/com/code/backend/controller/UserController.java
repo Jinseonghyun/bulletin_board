@@ -1,5 +1,6 @@
 package com.code.backend.controller;
 
+import com.code.backend.dto.SignUpUser;
 import com.code.backend.entity.User;
 import com.code.backend.service.UserService;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -26,8 +27,8 @@ public class UserController {
     }
 
     @PostMapping("/signUp")
-    public ResponseEntity<User> createUser(@RequestParam String username, @RequestParam String password, @RequestParam String email) {
-        User user = userService.createUser(username, password, email);
+    public ResponseEntity<User> createUser(@RequestBody SignUpUser signUpUser) {
+        User user = userService.createUser(signUpUser);
         return ResponseEntity.ok(user);
     }
 
