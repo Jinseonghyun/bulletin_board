@@ -7,6 +7,7 @@ import com.code.backend.service.CustomUserDetailService;
 import com.code.backend.service.UserService;
 import io.swagger.v3.oas.annotations.Parameter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -14,6 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -57,5 +59,13 @@ public class UserController {
         Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, password));
         UserDetails userDetails = userDetailService.loadUserByUsername(username);
         return jwtUtil.generateToken(userDetails.getUsername());
+    }
+
+    @PostMapping("/token/validation")
+    @ResponseStatus(HttpStatus.OK)
+    public void jwtValidate(@RequestParam String token) {
+        if (!jwtUtil.validateToken(token)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Token is not validation");
+        }
     }
 }
