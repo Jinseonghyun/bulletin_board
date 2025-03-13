@@ -3,6 +3,7 @@ package com.code.backend.config;
 import com.code.backend.jwt.JwtAuthenticationFilter;
 import com.code.backend.jwt.JwtUtil;
 import com.code.backend.service.CustomUserDetailService;
+import com.code.backend.service.JwtBlacklistService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,6 +27,9 @@ public class SecurityConfig {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private JwtBlacklistService jwtBlacklistService;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -34,7 +38,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests((requests) -> requests
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api/users/signUp", "/api/users/login").permitAll()
                         .anyRequest().authenticated()
-                ).addFilterBefore(new JwtAuthenticationFilter(jwtUtil, userDetailService), UsernamePasswordAuthenticationFilter.class)
+                ).addFilterBefore(new JwtAuthenticationFilter(jwtUtil, userDetailService, jwtBlacklistService), UsernamePasswordAuthenticationFilter.class)
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
 
 
