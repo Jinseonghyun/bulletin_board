@@ -5,6 +5,7 @@ import com.code.backend.dto.WriteArticleDto;
 import com.code.backend.entity.Article;
 import com.code.backend.entity.Board;
 import com.code.backend.entity.User;
+import com.code.backend.exception.RateLimitException;
 import com.code.backend.exception.ResourceNotFoundException;
 import com.code.backend.repository.ArticleRepository;
 import com.code.backend.repository.BoardRepository;
@@ -15,6 +16,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,6 +40,11 @@ public class ArticleService {
     public Article writeArticle(Long boardId, WriteArticleDto dto) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+
+        // rate limit 체크
+        if (!this.isCanWriteArticle()) {
+            throw new RateLimitException("article not written by rate limit");
+        }
 
         Optional<User> author = userRepository.findByUsername(userDetails.getUsername());
         Optional<Board> board = boardRepository.findById(boardId);
@@ -85,6 +95,12 @@ public class ArticleService {
         if (article.isEmpty()) {
             throw new ResourceNotFoundException("article not found");
         }
+
+        // rate limit 체크
+        if (!this.isCanEditArticle()) {
+            throw new RateLimitException("article not edited by rate limit");
+        }
+
         if (dto.getTitle() != null) {
             article.get().setTitle(dto.getTitle().get());
         }
@@ -93,5 +109,29 @@ public class ArticleService {
         }
         articleRepository.save(article.get());
         return article.get();
+    }
+
+    private boolean isCanWriteArticle() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        Article latestArticle = articleRepository.findLatestArticleByAuthorUsernameOrderByCreatedDate(userDetails.getUsername());
+        return this.isDifferenceMoreThanFiveMinutes(latestArticle.getCreatedDate());
+    }
+
+    private boolean isCanEditArticle() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        Article latestArticle = articleRepository.findLatestArticleByAuthorUsernameOrderByUpdatedDate(userDetails.getUsername());
+        return this.isDifferenceMoreThanFiveMinutes(latestArticle.getUpdatedDate());
+    }
+
+    private boolean isDifferenceMoreThanFiveMinutes(LocalDateTime localDateTime) {
+        LocalDateTime dateAsLocalDateTime = new Date().toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDateTime();
+
+        Duration duration = Duration.between(localDateTime, dateAsLocalDateTime);
+
+        return Math.abs(duration.toMinutes()) > 5;
     }
 }
