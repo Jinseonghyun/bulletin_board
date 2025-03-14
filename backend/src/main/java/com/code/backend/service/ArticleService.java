@@ -97,14 +97,14 @@ public class ArticleService {
             throw new ResourceNotFoundException("article not found");
         }
 
-        // rate limit 체크
-        if (!this.isCanEditArticle()) {
-            throw new RateLimitException("article not edited by rate limit");
-        }
-
         // authentication check
         if (article.get().getAuthor() == author.get()) {
             throw new ForbiddenException("article author different");
+        }
+
+        // rate limit 체크
+        if (!this.isCanEditArticle()) {
+            throw new RateLimitException("article not edited by rate limit");
         }
 
         if (dto.getTitle() != null) {
