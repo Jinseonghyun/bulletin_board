@@ -5,6 +5,7 @@ import com.code.backend.dto.WriteArticleDto;
 import com.code.backend.entity.Article;
 import com.code.backend.entity.Board;
 import com.code.backend.entity.User;
+import com.code.backend.exception.ForbiddenException;
 import com.code.backend.exception.RateLimitException;
 import com.code.backend.exception.ResourceNotFoundException;
 import com.code.backend.repository.ArticleRepository;
@@ -99,6 +100,11 @@ public class ArticleService {
         // rate limit 체크
         if (!this.isCanEditArticle()) {
             throw new RateLimitException("article not edited by rate limit");
+        }
+
+        // authentication check
+        if (article.get().getAuthor() == author.get()) {
+            throw new ForbiddenException("article author different");
         }
 
         if (dto.getTitle() != null) {
