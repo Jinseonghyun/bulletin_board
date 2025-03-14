@@ -31,6 +31,7 @@ public class User implements UserDetails{
     @Column(nullable = false)
     private String password;
 
+    @JsonIgnore
     @Column(nullable = false)
     private String email;
 
