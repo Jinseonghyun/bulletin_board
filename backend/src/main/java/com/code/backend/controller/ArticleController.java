@@ -1,5 +1,6 @@
 package com.code.backend.controller;
 
+import com.code.backend.dto.EditArticleDto;
 import com.code.backend.dto.WriteArticleDto;
 import com.code.backend.entity.Article;
 import com.code.backend.service.ArticleService;
@@ -42,4 +43,9 @@ public class ArticleController {
         return ResponseEntity.ok(articleService.firstGetArticle(boardId));
     }
 
+    @PutMapping("/{boardId}/articles/{articleId}")
+    public ResponseEntity<Article> editArticle(@PathVariable Long boardId, @PathVariable Long articleId,
+                                                     @RequestBody EditArticleDto editArticleDto) {
+        return ResponseEntity.ok(articleService.editArticle(boardId, articleId, editArticleDto));
+    }
 }

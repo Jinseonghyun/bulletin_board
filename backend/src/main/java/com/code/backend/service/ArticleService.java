@@ -1,5 +1,6 @@
 package com.code.backend.service;
 
+import com.code.backend.dto.EditArticleDto;
 import com.code.backend.dto.WriteArticleDto;
 import com.code.backend.entity.Article;
 import com.code.backend.entity.Board;
@@ -64,5 +65,33 @@ public class ArticleService {
 
     public List<Article> getNewArticle(Long boardId, Long articleId) {
         return articleRepository.findTop10ByBoardIdAndArticleIdGreaterThanOrderByCreatedDateDesc(boardId, articleId);
+    }
+
+    public Article editArticle(Long boardId, Long articleId, EditArticleDto dto) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+
+        Optional<User> author = userRepository.findByUsername(userDetails.getUsername());
+        Optional<Board> board = boardRepository.findById(boardId);
+
+        if (author.isEmpty()) {
+            throw new ResourceNotFoundException("author not found");
+        }
+        if (board.isEmpty()) {
+            throw new ResourceNotFoundException("board not found");
+        }
+
+        Optional<Article> article = articleRepository.findById(articleId);
+        if (article.isEmpty()) {
+            throw new ResourceNotFoundException("article not found");
+        }
+        if (dto.getTitle() != null) {
+            article.get().setTitle(dto.getTitle().get());
+        }
+        if (dto.getContent() != null) {
+            article.get().setContent(dto.getContent().get());
+        }
+        articleRepository.save(article.get());
+        return article.get();
     }
 }
