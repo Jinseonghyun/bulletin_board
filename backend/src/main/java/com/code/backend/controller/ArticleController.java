@@ -24,8 +24,8 @@ public class ArticleController {
     }
 
     @PostMapping("/{boardId}/articles")
-    public ResponseEntity<Article> writeArticle(@RequestBody WriteArticleDto writeArticleDto) {
-        return ResponseEntity.ok(articleService.writeArticle(writeArticleDto));
+    public ResponseEntity<Article> writeArticle(@PathVariable Long boardId, @RequestBody WriteArticleDto writeArticleDto) {
+        return ResponseEntity.ok(articleService.writeArticle(boardId, writeArticleDto));
     }
 
 

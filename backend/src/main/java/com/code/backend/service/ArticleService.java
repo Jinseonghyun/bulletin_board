@@ -31,12 +31,12 @@ public class ArticleService {
         this.userRepository = userRepository;
     }
 
-    public Article writeArticle(WriteArticleDto dto) {
+    public Article writeArticle(Long boardId, WriteArticleDto dto) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
         Optional<User> author = userRepository.findByUsername(userDetails.getUsername());
-        Optional<Board> board = boardRepository.findById(dto.getBoardId());
+        Optional<Board> board = boardRepository.findById(boardId);
 
         if (author.isEmpty()) {
             throw new ResourceNotFoundException("author not found");
