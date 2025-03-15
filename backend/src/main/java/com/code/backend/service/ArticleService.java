@@ -16,6 +16,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -38,6 +39,7 @@ public class ArticleService {
         this.userRepository = userRepository;
     }
 
+    @Transactional
     public Article writeArticle(Long boardId, WriteArticleDto dto) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
@@ -78,6 +80,7 @@ public class ArticleService {
         return articleRepository.findTop10ByBoardIdAndArticleIdGreaterThanOrderByCreatedDateDesc(boardId, articleId);
     }
 
+    @Transactional
     public Article editArticle(Long boardId, Long articleId, EditArticleDto dto) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
@@ -117,6 +120,7 @@ public class ArticleService {
         return article.get();
     }
 
+    @Transactional
     public boolean deleteArticle(Long boardId, Long articleId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
@@ -148,6 +152,9 @@ public class ArticleService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         Article latestArticle = articleRepository.findLatestArticleByAuthorUsernameOrderByCreatedDate(userDetails.getUsername());
+        if (latestArticle == null) {
+            return true;
+        }
         return this.isDifferenceMoreThanFiveMinutes(latestArticle.getCreatedDate());
     }
 
@@ -155,6 +162,9 @@ public class ArticleService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         Article latestArticle = articleRepository.findLatestArticleByAuthorUsernameOrderByUpdatedDate(userDetails.getUsername());
+        if (latestArticle == null || latestArticle.getUpdatedDate() == null) {
+            return true;
+        }
         return this.isDifferenceMoreThanFiveMinutes(latestArticle.getUpdatedDate());
     }
 

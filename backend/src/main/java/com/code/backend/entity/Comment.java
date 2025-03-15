@@ -9,21 +9,16 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Getter
 @Setter
 @NoArgsConstructor
-public class Article {
+public class Comment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(nullable = false)
-    private String title;
 
     @Lob
     @Column(nullable = false)
@@ -36,11 +31,7 @@ public class Article {
     @ManyToOne
     @JsonIgnore
     @JoinColumn(foreignKey = @ForeignKey(ConstraintMode.CONSTRAINT))
-    private Board board;
-
-    @OneToMany
-    @JoinColumn(foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
-    private List<Comment> comments = new ArrayList<>();
+    private Article article;
 
     @Column(nullable = false)
     private Boolean isDeleted = false;
