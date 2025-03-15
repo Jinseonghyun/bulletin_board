@@ -1,0 +1,108 @@
+package com.code.backend.service;
+
+import com.code.backend.dto.WriteCommentDto;
+import com.code.backend.entity.Article;
+import com.code.backend.entity.Board;
+import com.code.backend.entity.Comment;
+import com.code.backend.entity.User;
+import com.code.backend.exception.ForbiddenException;
+import com.code.backend.exception.RateLimitException;
+import com.code.backend.exception.ResourceNotFoundException;
+import com.code.backend.repository.ArticleRepository;
+import com.code.backend.repository.BoardRepository;
+import com.code.backend.repository.CommentRepository;
+import com.code.backend.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
+import java.util.Optional;
+
+@Service
+public class CommentService {
+
+    private final BoardRepository boardRepository;
+    private final ArticleRepository articleRepository;
+    private final UserRepository userRepository;
+    private final CommentRepository commentRepository;
+
+
+    @Autowired
+    public CommentService(BoardRepository boardRepository, ArticleRepository articleRepository, UserRepository userRepository, CommentRepository commentRepository) {
+        this.boardRepository = boardRepository;
+        this.articleRepository = articleRepository;
+        this.userRepository = userRepository;
+        this.commentRepository = commentRepository;
+    }
+
+    @Transactional
+    public Comment writeComment(Long boardId, Long articleId, WriteCommentDto dto) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+
+        // rate limit 체크
+        if (!this.isCanWriteComment()) {
+            throw new RateLimitException("article not written by rate limit");
+        }
+
+        Optional<User> author = userRepository.findByUsername(userDetails.getUsername());
+        Optional<Board> board = boardRepository.findById(boardId);
+        Optional<Article> article = articleRepository.findById(articleId);
+
+        if (author.isEmpty()) {
+            throw new ResourceNotFoundException("author not found");
+        }
+        if (board.isEmpty()) {
+            throw new ResourceNotFoundException("board not found");
+        }
+        if (article.isEmpty()) {
+            throw new ResourceNotFoundException("article not found");
+        }
+        if (article.get().getIsDeleted()) {
+            throw new ForbiddenException("article is deleted");
+        }
+
+        Comment comment = new Comment();
+        comment.setArticle(article.get());
+        comment.setAuthor(author.get());
+        comment.setContent(dto.getContent());
+        commentRepository.save(comment);
+        return comment;
+    }
+    private boolean isCanWriteComment() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        Comment latestComment = commentRepository.findLatestCommentOrderByCreatedDate(userDetails.getUsername());
+        if (latestComment == null) {
+            return true;
+        }
+        return this.isDifferenceMoreThanOneMinutes(latestComment.getCreatedDate());
+    }
+
+    private boolean isCanEditComment() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        Comment latestComment = commentRepository.findLatestCommentOrderByUpdatedDate(userDetails.getUsername());
+        if (latestComment == null) {
+            return true;
+        }
+        return this.isDifferenceMoreThanOneMinutes(latestComment.getUpdatedDate());
+    }
+
+    private boolean isDifferenceMoreThanOneMinutes(LocalDateTime localDateTime) {
+        LocalDateTime dateAsLocalDateTime = new Date().toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDateTime();
+
+        Duration duration = Duration.between(localDateTime, dateAsLocalDateTime);
+
+        return Math.abs(duration.toMinutes()) > 1;
+    }
+}
