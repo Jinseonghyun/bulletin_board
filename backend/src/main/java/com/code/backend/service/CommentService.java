@@ -1,5 +1,6 @@
 package com.code.backend.service;
 
+import com.code.backend.dto.EditCommentDto;
 import com.code.backend.dto.WriteCommentDto;
 import com.code.backend.entity.Article;
 import com.code.backend.entity.Board;
@@ -53,7 +54,7 @@ public class CommentService {
 
         // rate limit 체크
         if (!this.isCanWriteComment()) {
-            throw new RateLimitException("article not written by rate limit");
+            throw new RateLimitException("comment not written by rate limit");
         }
 
         Optional<User> author = userRepository.findByUsername(userDetails.getUsername());
@@ -81,6 +82,46 @@ public class CommentService {
         return comment;
     }
 
+    @Transactional
+    public Comment editComment(Long boardId, Long articleId, Long commentId, EditCommentDto dto) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+
+        // rate limit 체크
+        if (!this.isCanEditComment()) {
+            throw new RateLimitException("comment not written by rate limit");
+        }
+
+        Optional<User> author = userRepository.findByUsername(userDetails.getUsername());
+        Optional<Board> board = boardRepository.findById(boardId);
+        Optional<Article> article = articleRepository.findById(articleId);
+
+        if (author.isEmpty()) {
+            throw new ResourceNotFoundException("author not found");
+        }
+        if (board.isEmpty()) {
+            throw new ResourceNotFoundException("board not found");
+        }
+        if (article.isEmpty()) {
+            throw new ResourceNotFoundException("article not found");
+        }
+        if (article.get().getIsDeleted()) {
+            throw new ForbiddenException("article is deleted");
+        }
+        Optional<Comment> comment = commentRepository.findById(commentId);
+        if (comment.isEmpty()) {
+            throw new ResourceNotFoundException("comment not found");
+        }
+        if (comment.get().getAuthor() != author.get()) {
+            throw new ForbiddenException("comment author different");
+        }
+        if (dto.getContent() != null) {
+            comment.get().setContent(dto.getContent());
+        }
+        commentRepository.save(comment.get());
+        return comment.get();
+    }
+
     private boolean isCanWriteComment() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
@@ -95,7 +136,7 @@ public class CommentService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         Comment latestComment = commentRepository.findLatestCommentOrderByUpdatedDate(userDetails.getUsername());
-        if (latestComment == null) {
+        if (latestComment == null || latestComment.getUpdatedDate() == null) {
             return true;
         }
         return this.isDifferenceMoreThanOneMinutes(latestComment.getUpdatedDate());
