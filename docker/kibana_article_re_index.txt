@@ -1,0 +1,174 @@
+## reindex 를 통한 mapping 변경
+POST /article/_doc/4
+{
+  "content": "개발도서 소개",
+  "created_date": "2025-03-14T22:13:00.777",
+  "title": "테스트",
+  "updated_date": null,
+  "author_id": 1,
+  "board_id": 1,
+  "is_deleted": false
+}
+
+GET /article/_doc/4
+
+
+##  테스트 위한 데이터
+POST /article/_doc/1
+{
+  "id": 1,
+  "content": "이게 되나?",
+  "created_date": "2025-03-14T22:13:00.777",
+  "title": "테스트",
+  "updated_date": null,
+  "author_id": 1,
+  "author_name": "test1",
+  "board_id": 1,
+  "is_deleted": false
+}
+
+POST /article/_doc/2
+{
+  "id": 2,
+  "content": "이제 되잖아!",
+  "created_date": "2025-03-14T22:14:28.826",
+  "title": "테스트 2번쨰",
+  "updated_date": null,
+  "author_id": 1,
+  "author_name": "test1",
+  "board_id": 1,
+  "is_deleted": false
+}
+
+POST /article/_doc/3
+{
+  "id": 3,
+  "content": "비밀번호 보이면 안돼!",
+  "created_date": "2025-03-14T22:18:12.746",
+  "title": "이게 수정이 되나?",
+  "updated_date": "2025-03-15T00:36:17.549",
+  "author_id": 1,
+  "author_name": "test1",
+  "board_id": 1,
+  "is_deleted": false
+}
+
+## 잘 들어갔는지 확인
+GET /article/_search
+
+## mapping 새로 만들기
+PUT /article_new
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "nori_analyzer": {
+          "type": "custom",
+          "tokenizer": "nori_tokenizer",
+          "filter": [
+            "nori_part_of_speech",
+            "nori_readingform",
+            "lowercase",
+            "cjk_width"
+          ]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "content": {
+        "type": "text",
+        "analyzer": "nori_analyzer"
+      },
+      "created_date": {
+        "type": "date",
+        "format": "yyyy-MM-dd'T'HH:mm:ss.SSS"
+      },
+      "title": {
+        "type": "text",
+        "analyzer": "nori_analyzer",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "updated_date": {
+        "type": "date",
+        "format": "yyyy-MM-dd'T'HH:mm:ss.SSS"
+      },
+      "author_id": {
+        "type": "long"
+      },
+      "author_name": {
+        "type": "text",
+        "analyzer": "nori_analyzer"
+      },
+      "board_id": {
+        "type": "long"
+      },
+      "is_deleted": {
+        "type": "boolean"
+      }
+    }
+  }
+}
+
+## index 잘 생성됬는지 체크
+GET /_cat/indices
+
+## yello 상태 처리
+PUT /article_new/_settings
+{
+  "index": {
+    "number_of_replicas": 0
+  }
+}
+
+## reindex 처리
+POST _reindex
+{
+  "source": {
+    "index": "article"
+  },
+  "dest": {
+    "index": "article_new"
+  },
+  "script": {
+    "source": "ctx._source.remove('id')"
+  }
+}
+
+## 잘 됬나 검색
+GET /article_new/_search
+
+## 별칭 부여하기 위해서
+DELETE /article
+
+## 별칭 부여하기
+POST /_aliases
+{
+  "actions": [
+    {
+      "add": {
+        "index": "article_new",
+        "alias": "article"
+      }
+    }
+  ]
+}
+
+## article은 지워지고 별명이 article인 article_new 로 검색해도 나온다.
+GET /article/_search
+
+## 잘 나오나 검색해서 확인
+GET /article/_search
+{
+  "query": {
+    "match": {
+      "title": "테스트"
+    }
+  }
+}
