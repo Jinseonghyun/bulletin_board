@@ -32,6 +32,11 @@ services:
       - es-data:/usr/share/elasticsearch/data
     ports:
       - "9200:9200"
+    command: >
+      sh -c "
+      bin/elasticsearch-plugin install analysis-nori;
+      bin/elasticsearch
+      "
   kibana:
     image: docker.elastic.co/kibana/kibana:8.5.0
     container_name: kibana
