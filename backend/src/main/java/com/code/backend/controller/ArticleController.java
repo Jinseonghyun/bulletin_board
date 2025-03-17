@@ -30,12 +30,9 @@ public class ArticleController {
     }
 
     @PostMapping("/{boardId}/articles")
-    public ResponseEntity<Article> writeArticle(@PathVariable Long boardId, @RequestBody WriteArticleDto writeArticleDto) {
-        try {
-            return ResponseEntity.ok(articleService.writeArticle(boardId, writeArticleDto));
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
+    public ResponseEntity<Article> writeArticle(@PathVariable Long boardId,
+                                                @RequestBody WriteArticleDto writeArticleDto) throws JsonProcessingException {
+        return ResponseEntity.ok(articleService.writeArticle(boardId, writeArticleDto));
     }
 
 
@@ -54,18 +51,18 @@ public class ArticleController {
 
     @PutMapping("/{boardId}/articles/{articleId}")
     public ResponseEntity<Article> editArticle(@PathVariable Long boardId, @PathVariable Long articleId,
-                                                     @RequestBody EditArticleDto editArticleDto) {
+                                                     @RequestBody EditArticleDto editArticleDto) throws JsonProcessingException {
         return ResponseEntity.ok(articleService.editArticle(boardId, articleId, editArticleDto));
     }
 
     @DeleteMapping("/{boardId}/articles/{articleId}")
-    public ResponseEntity<String> deleteArticle(@PathVariable Long boardId, @PathVariable Long articleId) {
+    public ResponseEntity<String> deleteArticle(@PathVariable Long boardId, @PathVariable Long articleId) throws JsonProcessingException {
         articleService.deleteArticle(boardId, articleId);
         return ResponseEntity.ok("article is deleted");
     }
 
     @GetMapping("/{boardId}/articles/{articleId}")
-    public ResponseEntity<Article> getArticleWithComment(@PathVariable Long boardId, @PathVariable Long articleId) {
+    public ResponseEntity<Article> getArticleWithComment(@PathVariable Long boardId, @PathVariable Long articleId) throws JsonProcessingException {
         CompletableFuture<Article> article = commentService.getArticleWithComment(boardId, articleId);
         return ResponseEntity.ok(article.resultNow());
     }

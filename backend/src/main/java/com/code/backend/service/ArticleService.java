@@ -90,7 +90,7 @@ public class ArticleService {
     }
 
     @Transactional
-    public Article editArticle(Long boardId, Long articleId, EditArticleDto dto) {
+    public Article editArticle(Long boardId, Long articleId, EditArticleDto dto) throws JsonProcessingException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
@@ -126,11 +126,12 @@ public class ArticleService {
             article.get().setContent(dto.getContent().get());
         }
         articleRepository.save(article.get());
+        this.indexArticle(article.get());
         return article.get();
     }
 
     @Transactional
-    public boolean deleteArticle(Long boardId, Long articleId) {
+    public boolean deleteArticle(Long boardId, Long articleId) throws JsonProcessingException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         Optional<User> author = userRepository.findByUsername(userDetails.getUsername());
@@ -154,6 +155,7 @@ public class ArticleService {
         }
         article.get().setIsDeleted(true);
         articleRepository.save(article.get());
+        this.indexArticle(article.get());
         return true;
     }
 
