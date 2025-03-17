@@ -190,6 +190,7 @@ public class CommentService {
     }
 
     @Async
+    @Transactional
     protected CompletableFuture<Article> getArticle(Long boardId, Long articleId) {
         Optional<Board> board = boardRepository.findById(boardId);
         if (board.isEmpty()) {
@@ -199,6 +200,8 @@ public class CommentService {
         if (article.isEmpty() || article.get().getIsDeleted()) {
             throw new ResourceNotFoundException("article not found");
         }
+        article.get().setViewCount(article.get().getViewCount() + 1);
+        articleRepository.save(article.get());
         return CompletableFuture.completedFuture(article.get());
     }
 
