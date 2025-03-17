@@ -15,16 +15,19 @@ public class ElasticSearchService {
         this.webClient = webClient;
     }
 
-    public Mono<String> search(String index, String query) {
+    public Mono<String> articleSearch(String index, String query) {
         return webClient.get()
-                .uri("/{index}/_search?q={query}", index, query)
+                .uri("/article/_search?q={query}", index, query)
                 .retrieve()
                 .bodyToMono(String.class);
     }
 
-    public Mono<String> indexDocument(String index, String id, String document) {
-        return webClient.get()
-                .uri("/{index}/_doc/{id}", index, id)
+    public Mono<String> indexArticleDocument(String id, String document) {
+        return webClient.put()
+                .uri("/article/_doc/{id}", id)
+                .header("Content-Type", "application/json")
+                .header("Accept", "application/json")
+                .bodyValue(document)
                 .retrieve()
                 .bodyToMono(String.class);
     }

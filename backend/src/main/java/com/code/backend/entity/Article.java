@@ -53,7 +53,7 @@ public class Article {
     private LocalDateTime updatedDate;
 
     @Column(nullable = false)
-    private Long viewCount;
+    private Long viewCount = 0L;
 
     @PrePersist
     protected void onCreate() {

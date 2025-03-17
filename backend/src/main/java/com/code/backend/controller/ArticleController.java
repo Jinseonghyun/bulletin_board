@@ -5,6 +5,7 @@ import com.code.backend.dto.WriteArticleDto;
 import com.code.backend.entity.Article;
 import com.code.backend.service.ArticleService;
 import com.code.backend.service.CommentService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -30,7 +31,11 @@ public class ArticleController {
 
     @PostMapping("/{boardId}/articles")
     public ResponseEntity<Article> writeArticle(@PathVariable Long boardId, @RequestBody WriteArticleDto writeArticleDto) {
-        return ResponseEntity.ok(articleService.writeArticle(boardId, writeArticleDto));
+        try {
+            return ResponseEntity.ok(articleService.writeArticle(boardId, writeArticleDto));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 
