@@ -49,6 +49,15 @@ public class ArticleController {
         return ResponseEntity.ok(articleService.firstGetArticle(boardId));
     }
 
+    @GetMapping("/{boardId}/articles/search")
+    public ResponseEntity<List<Article>> searchArticle(@PathVariable Long boardId,
+                                                    @RequestParam(required = true) String keyword) {
+        if (keyword != null) {
+           return ResponseEntity.ok(articleService.searchArticle(keyword));
+        }
+        return ResponseEntity.ok(articleService.firstGetArticle(boardId));
+    }
+
     @PutMapping("/{boardId}/articles/{articleId}")
     public ResponseEntity<Article> editArticle(@PathVariable Long boardId, @PathVariable Long articleId,
                                                      @RequestBody EditArticleDto editArticleDto) throws JsonProcessingException {

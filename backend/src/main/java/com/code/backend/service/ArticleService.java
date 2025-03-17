@@ -19,6 +19,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -26,6 +27,7 @@ import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 
 @Service
 public class ArticleService {
@@ -192,5 +194,16 @@ public class ArticleService {
     public String indexArticle(Article article) throws JsonProcessingException {
         String articleJson = objectMapper.writeValueAsString(article);
         return elasticSearchService.indexArticleDocument(article.getId().toString(), articleJson).block();
+    }
+
+    public List<Article> searchArticle(String keyword) {
+        Mono<List<Long>> articleIds = elasticSearchService.articleSearch(keyword);
+        try {
+            return articleRepository.findAllById(articleIds.toFuture().get());
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
