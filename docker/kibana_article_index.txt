@@ -1,0 +1,189 @@
+PUT /article
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "nori_analyzer": {
+          "type": "custom",
+          "tokenizer": "nori_tokenizer",
+          "filter": [
+            "nori_part_of_speech",
+            "nori_readingform",
+            "lowercase",
+            "cjk_width"
+          ]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "id": {
+        "type": "long"
+      },
+      "content": {
+        "type": "text",
+        "analyzer": "nori_analyzer"
+      },
+      "created_date": {
+        "type": "date",
+        "format": "yyyy-MM-dd'T'HH:mm:ss.SSS"
+      },
+      "title": {
+        "type": "text",
+        "analyzer": "nori_analyzer",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "updated_date": {
+        "type": "date",
+        "format": "yyyy-MM-dd'T'HH:mm:ss.SSS"
+      },
+      "author_id": {
+        "type": "long"
+      },
+      "author_name": {
+        "type": "text",
+        "analyzer": "nori_analyzer"
+      },
+      "board_id": {
+        "type": "long"
+      },
+      "is_deleted": {
+        "type": "boolean"
+      }
+    }
+  }
+}
+
+
+GET /_cat/indices
+
+PUT /article/_settings
+{
+  "index": {
+    "number_of_replicas": 0
+  }
+}
+
+POST /article/_doc/1
+{
+  "id": 1,
+  "content": "이게 되나?",
+  "created_date": "2025-03-14T22:13:00.777",
+  "title": "테스트",
+  "updated_date": null,
+  "author_id": 1,
+  "board_id": 1,
+  "is_deleted": false
+}
+
+GET /article
+
+GET /article/_doc/1
+
+GET /article/_search
+{
+  "query": {
+    "match": {
+      "content": "이게"
+    }
+  }
+}
+
+POST /article/_doc/2
+{
+  "id": 2,
+  "content": "개발업무 소개",
+  "created_date": "2025-03-14T22:13:00.777",
+  "title": "테스트",
+  "updated_date": null,
+  "author_id": 1,
+  "board_id": 1,
+  "is_deleted": false
+}
+
+POST /article/_doc/3
+{
+  "id": 3,
+  "content": "개발자 소개",
+  "created_date": "2025-03-14T22:13:00.777",
+  "title": "테스트",
+  "updated_date": null,
+  "author_id": 1,
+  "board_id": 1,
+  "is_deleted": false
+}
+
+POST /article/_doc/4
+{
+  "content": "개발도서 소개",
+  "created_date": "2025-03-14T22:13:00.777",
+  "title": "테스트",
+  "updated_date": null,
+  "author_id": 1,
+  "board_id": 1,
+  "is_deleted": false
+}
+
+GET /article/_search
+
+GET /article/_search
+{
+  "query": {
+    "match": {
+      "content": "개발"
+    }
+  }
+}
+
+
+## 형태소 분석기 직접 실행
+GET /article/_analyze
+{
+  "analyzer": "nori_analyzer",
+  "text": "개발도서"
+}
+
+GET /article/_analyze
+{
+  "analyzer": "nori_analyzer",
+  "text": "개발자"
+}
+
+GET /article/_analyze
+{
+  "analyzer": "nori_analyzer",
+  "text": "자바개발자"
+}
+
+GET /article/_search
+{
+  "query": {
+    "match": {
+      "content": "자바개발"
+    }
+  }
+}
+
+GET /article/_search
+{
+  "query": {
+    "match": {
+      "content": "개발업무"
+    }
+  }
+}
+
+## 충돌방지 위해 기존 데이터 삭제
+DELETE /article/_doc/1
+DELETE /article/_doc/2
+DELETE /article/_doc/3
+DELETE /article/_doc/4
+
+## 잘 지워졌나 확인
+GET /article/_search

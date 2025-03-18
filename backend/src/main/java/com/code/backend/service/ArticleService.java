@@ -11,12 +11,15 @@ import com.code.backend.exception.ResourceNotFoundException;
 import com.code.backend.repository.ArticleRepository;
 import com.code.backend.repository.BoardRepository;
 import com.code.backend.repository.UserRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -24,6 +27,7 @@ import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 
 @Service
 public class ArticleService {
@@ -32,15 +36,21 @@ public class ArticleService {
     private final ArticleRepository articleRepository;
     private final UserRepository userRepository;
 
+    private final ElasticSearchService elasticSearchService;
+    private final ObjectMapper objectMapper;
+
     @Autowired
-    public ArticleService(BoardRepository boardRepository, ArticleRepository articleRepository, UserRepository userRepository) {
+    public ArticleService(BoardRepository boardRepository, ArticleRepository articleRepository, UserRepository userRepository,
+                          ElasticSearchService elasticSearchService, ObjectMapper objectMapper) {
         this.boardRepository = boardRepository;
         this.articleRepository = articleRepository;
         this.userRepository = userRepository;
+        this.elasticSearchService = elasticSearchService;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
-    public Article writeArticle(Long boardId, WriteArticleDto dto) {
+    public Article writeArticle(Long boardId, WriteArticleDto dto) throws JsonProcessingException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
@@ -65,6 +75,7 @@ public class ArticleService {
         article.setTitle(dto.getTitle());
         article.setContent(dto.getContent());
         articleRepository.save(article);
+        this.indexArticle(article);
         return article;
     }
 
@@ -81,7 +92,7 @@ public class ArticleService {
     }
 
     @Transactional
-    public Article editArticle(Long boardId, Long articleId, EditArticleDto dto) {
+    public Article editArticle(Long boardId, Long articleId, EditArticleDto dto) throws JsonProcessingException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
@@ -117,11 +128,12 @@ public class ArticleService {
             article.get().setContent(dto.getContent().get());
         }
         articleRepository.save(article.get());
+        this.indexArticle(article.get());
         return article.get();
     }
 
     @Transactional
-    public boolean deleteArticle(Long boardId, Long articleId) {
+    public boolean deleteArticle(Long boardId, Long articleId) throws JsonProcessingException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         Optional<User> author = userRepository.findByUsername(userDetails.getUsername());
@@ -145,6 +157,7 @@ public class ArticleService {
         }
         article.get().setIsDeleted(true);
         articleRepository.save(article.get());
+        this.indexArticle(article.get());
         return true;
     }
 
@@ -176,5 +189,21 @@ public class ArticleService {
         Duration duration = Duration.between(localDateTime, dateAsLocalDateTime);
 
         return Math.abs(duration.toMinutes()) > 5;
+    }
+
+    public String indexArticle(Article article) throws JsonProcessingException {
+        String articleJson = objectMapper.writeValueAsString(article);
+        return elasticSearchService.indexArticleDocument(article.getId().toString(), articleJson).block();
+    }
+
+    public List<Article> searchArticle(String keyword) {
+        Mono<List<Long>> articleIds = elasticSearchService.articleSearch(keyword);
+        try {
+            return articleRepository.findAllById(articleIds.toFuture().get());
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
