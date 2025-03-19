@@ -1,5 +1,6 @@
 package com.code.backend.controller;
 
+import com.code.backend.dto.AdHistoryResult;
 import com.code.backend.dto.AdvertisementDto;
 import com.code.backend.dto.EditArticleDto;
 import com.code.backend.dto.WriteArticleDto;
@@ -57,5 +58,11 @@ public class AdvertisementController {
         String ipAddress = request.getRemoteAddr();
         advertisementService.clickAd(adId, ipAddress);
         return ResponseEntity.ok("click");
+    }
+
+    @GetMapping("/ads/history")
+    public ResponseEntity<List<AdHistoryResult>> getAdHistory() {
+        List<AdHistoryResult> result = advertisementService.getAdViewHistoryGroupedByAdId();
+        return ResponseEntity.ok(result);
     }
 }
