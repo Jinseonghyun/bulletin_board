@@ -1,0 +1,87 @@
+// 로그인한 유저가 광고 id 를 통해 찾은 광고를 몇번을 봤는지
+
+db.adViewHistory.aggregate([
+    {
+        $match: {
+            createdDate: {
+                $gte: new Date(2025, 3, 19),
+                $lt: new Date(2025, 3, 20)
+            },
+            username: {$exists: true} // username 필드가 존재하는 문서만 필터링
+        }
+    },
+    {
+        $group: {
+            _id: "$adId", // adId 기준으로 그룹화
+            count: { $sum: 1 } // 각 그룹에서 문서의 개수 집계
+        }
+    }
+])
+
+// 로그인 안한 게스트 유저가 광고 id 를 통해 찾은 광고를 몇번을 봤는지
+
+db.adViewHistory.aggregate([
+    {
+        $match: {
+            createdDate: {
+                $gte: new Date(2025, 3, 19),
+                $lt: new Date(2025, 3, 20)
+            },
+            username: {$exists: false} // username 필드가 존재하는 문서만 필터링
+        }
+    },
+    {
+        $group: {
+            _id: "$adId", // adId 기준으로 그룹화
+            count: { $sum: 1 } // 각 그룹에서 문서의 개수 집계
+        }
+    }
+])
+
+// 클릭에 대해서도 로그인한 유저가 광고 id 를 통해 찾은 광고를 몇번 클릭했는지
+
+db.adClickHistory.aggregate([
+    {
+        $match: {
+            createdDate: {
+                $gte: new Date(2025, 3, 19),
+                $lt: new Date(2025, 3, 20)
+            },
+            username: {$exists: true} // username 필드가 존재하는 문서만 필터링
+        }
+    },
+    {
+        $group: {
+            _id: "$adId", // adId 기준으로 그룹화
+            count: { $sum: 1 } // 각 그룹에서 문서의 개수 집계
+        }
+    }
+])
+
+// 한 유저가 같은 날에 두번 광고 확인하면(Click) 중복처리로 (회원은 다른PC에서 동일 광고를 보면 중복처리 되어 1번으로 계산)
+// 유니크 처리
+
+db.adClickHistory.aggregate([
+    {
+        $match: {
+            createdDate: {
+                $gte: new Date(2025, 3, 19),
+                $lt: new Date(2025, 3, 20)
+            },
+            username: {$exists: true} // username 필드가 존재하는 문서만 필터링
+        }
+    },
+    {
+        $group: {
+            _id: "$adId", // adId 기준으로 그룹화
+            // count: { $sum: 1 } // 각 그룹에서 문서의 개수 집계
+            uniqueUsernames: { $addToSet: "$username" }
+        }
+    },
+    {
+        $project: {
+            _id: 1,
+            count: { $size: "$uniqueUsernames" } // 고유한 username의 수를 계산
+        }
+    }
+])
