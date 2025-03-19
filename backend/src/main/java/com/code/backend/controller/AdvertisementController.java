@@ -63,6 +63,7 @@ public class AdvertisementController {
     @GetMapping("/ads/history")
     public ResponseEntity<List<AdHistoryResult>> getAdHistory() {
         List<AdHistoryResult> result = advertisementService.getAdViewHistoryGroupedByAdId();
+        advertisementService.insertAdViewStat(result);
         return ResponseEntity.ok(result);
     }
 }

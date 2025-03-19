@@ -4,9 +4,11 @@ import com.code.backend.dto.AdHistoryResult;
 import com.code.backend.dto.AdvertisementDto;
 import com.code.backend.entity.AdClickHistory;
 import com.code.backend.entity.AdViewHistory;
+import com.code.backend.entity.AdViewStat;
 import com.code.backend.entity.Advertisement;
 import com.code.backend.repository.AdClickHistoryRepository;
 import com.code.backend.repository.AdViewHistoryRepository;
+import com.code.backend.repository.AdViewStatRepository;
 import com.code.backend.repository.AdvertisementRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -22,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
@@ -34,14 +37,16 @@ public class AdvertisementService {
     private AdViewHistoryRepository adViewHistoryRepository;
     private AdClickHistoryRepository adClickHistoryRepository;
     private MongoTemplate mongoTemplate;
+    private AdViewStatRepository adViewStatRepository;
 
     @Autowired
-    public AdvertisementService(AdvertisementRepository advertisementRepository, RedisTemplate<String, Object> redisTemplate, AdViewHistoryRepository adViewHistoryRepository, AdClickHistoryRepository adClickHistoryRepository, MongoTemplate mongoTemplate) {
+    public AdvertisementService(AdvertisementRepository advertisementRepository, RedisTemplate<String, Object> redisTemplate, AdViewHistoryRepository adViewHistoryRepository, AdClickHistoryRepository adClickHistoryRepository, MongoTemplate mongoTemplate, AdViewStatRepository adViewStatRepository) {
         this.advertisementRepository = advertisementRepository;
         this.redisTemplate = redisTemplate;
         this.adViewHistoryRepository = adViewHistoryRepository;
         this.adClickHistoryRepository = adClickHistoryRepository;
         this.mongoTemplate = mongoTemplate;
+        this.adViewStatRepository = adViewStatRepository;
     }
 
     @Transactional
@@ -106,16 +111,16 @@ public class AdvertisementService {
     public List<AdHistoryResult> getAdViewHistoryGroupedByAdId() {
         List<AdHistoryResult> usernameResult = this.getAdViewHistoryGroupedByAdIdAndUsername();
         List<AdHistoryResult> clientIpResult = this.getAdViewHistoryGroupedByAdIdAndClientIp();
-        HashMap<Long, Integer> totalResult = new HashMap<>();
+        HashMap<Long, Long> totalResult = new HashMap<>();
         for (AdHistoryResult item : usernameResult) {
             totalResult.put(item.getAdId(), item.getCount());
         }
         for (AdHistoryResult item : clientIpResult) {
-            totalResult.merge(item.getAdId(), item.getCount(), Integer::sum);
+            totalResult.merge(item.getAdId(), item.getCount(), Long::sum);
         }
 
         List<AdHistoryResult> resultList = new ArrayList<>();
-        for (Map.Entry<Long, Integer> entry : totalResult.entrySet()) {
+        for (Map.Entry<Long, Long> entry : totalResult.entrySet()) {
             AdHistoryResult result = new AdHistoryResult();
             result.setAdId(entry.getKey());
             result.setCount(entry.getValue());
@@ -176,5 +181,21 @@ public class AdvertisementService {
         AggregationResults<AdHistoryResult> results = mongoTemplate.aggregate(aggregation, "adViewHistory", AdHistoryResult.class);
 
         return results.getMappedResults();
+    }
+
+    public void insertAdViewStat(List<AdHistoryResult> result) {
+        ArrayList<AdViewStat> arrayList = new ArrayList<>();
+        for (AdHistoryResult item : result) {
+            AdViewStat adViewStat = new AdViewStat();
+            adViewStat.setAdId(item.getAdId());
+            adViewStat.setCount(item.getCount());
+            // yyyy-MM-dd 형식의 DateTimeFormatter 생성
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            // LocalDateTime을 yyyy-MM-dd 형식의 문자열로 변환
+            String formattedDate = LocalDateTime.now().minusDays(1).format(formatter);
+            adViewStat.setDt(formattedDate);
+            arrayList.add(adViewStat);
+        }
+        adViewStatRepository.saveAll(arrayList);
     }
 }

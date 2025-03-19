@@ -7,5 +7,5 @@ import lombok.Setter;
 @Setter
 public class AdHistoryResult {
     private Long adId;
-    private int count;
+    private Long count;
 }
