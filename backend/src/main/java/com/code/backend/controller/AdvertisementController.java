@@ -52,4 +52,10 @@ public class AdvertisementController {
         return ResponseEntity.ok(advertisementList);
     }
 
+    @PostMapping("/ads/{adId}")
+    public Object clickAd(@PathVariable Long adId, HttpServletRequest request) {
+        String ipAddress = request.getRemoteAddr();
+        advertisementService.clickAd(adId, ipAddress);
+        return ResponseEntity.ok("click");
+    }
 }

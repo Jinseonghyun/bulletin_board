@@ -1,8 +1,10 @@
 package com.code.backend.service;
 
 import com.code.backend.dto.AdvertisementDto;
+import com.code.backend.entity.AdClickHistory;
 import com.code.backend.entity.AdViewHistory;
 import com.code.backend.entity.Advertisement;
+import com.code.backend.repository.AdClickHistoryRepository;
 import com.code.backend.repository.AdViewHistoryRepository;
 import com.code.backend.repository.AdvertisementRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,12 +27,14 @@ public class AdvertisementService {
     private AdvertisementRepository advertisementRepository;
     private RedisTemplate<String, Object> redisTemplate;
     private AdViewHistoryRepository adViewHistoryRepository;
+    private AdClickHistoryRepository adClickHistoryRepository;
 
     @Autowired
-    public AdvertisementService(AdvertisementRepository advertisementRepository, RedisTemplate<String, Object> redisTemplate, AdViewHistoryRepository adViewHistoryRepository) {
+    public AdvertisementService(AdvertisementRepository advertisementRepository, RedisTemplate<String, Object> redisTemplate, AdViewHistoryRepository adViewHistoryRepository, AdClickHistoryRepository adClickHistoryRepository) {
         this.advertisementRepository = advertisementRepository;
         this.redisTemplate = redisTemplate;
         this.adViewHistoryRepository = adViewHistoryRepository;
+        this.adClickHistoryRepository = adClickHistoryRepository;
     }
 
     @Transactional
@@ -61,6 +65,20 @@ public class AdvertisementService {
             return Optional.ofNullable((Advertisement) redisTemplate.opsForHash().get(REDIS_KEY, adId));
         }
         return advertisementRepository.findById(adId);
+    }
+
+    public void clickAd(Long adId, String clientIp) {
+        AdClickHistory adClickHistory = new AdClickHistory();
+        adClickHistory.setAdId(adId);
+        adClickHistory.setClientIp(clientIp);
+        adClickHistory.setCreatedDate(LocalDateTime.now());
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Object principal = authentication.getPrincipal();
+        if (!principal.equals("anonymousUser")) {
+            UserDetails userDetails = (UserDetails) principal;
+            adClickHistory.setUsername(userDetails.getUsername());
+        }
+        adClickHistoryRepository.save(adClickHistory);
     }
 
     private void insertAdViewHistory(Long adId, String clientIp, Boolean isTrueView) {
