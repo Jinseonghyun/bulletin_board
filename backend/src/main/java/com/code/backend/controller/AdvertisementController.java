@@ -9,6 +9,7 @@ import com.code.backend.service.AdvertisementService;
 import com.code.backend.service.ArticleService;
 import com.code.backend.service.CommentService;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,7 +20,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 @RestController
-@RequestMapping("/api/ads")
+@RequestMapping("/api")
 public class AdvertisementController {
 
     private final AdvertisementService advertisementService;
@@ -29,21 +30,22 @@ public class AdvertisementController {
         this.advertisementService = advertisementService;
     }
 
-    @PostMapping("")
+    @PostMapping("/admin/ads")
     public ResponseEntity<Advertisement> writeAd(@RequestBody AdvertisementDto advertisementDto) {
         Advertisement advertisement = advertisementService.writeAd(advertisementDto);
         return ResponseEntity.ok(advertisement);
     }
 
-    @GetMapping("")
+    @GetMapping("/ads")
     public ResponseEntity<List<Advertisement>> getAdList() {
         List<Advertisement> advertisementList = advertisementService.getAdList();
         return ResponseEntity.ok(advertisementList);
     }
 
-    @GetMapping("/{adId}")
-    public Object getAdList(@PathVariable Long adId) {
-        Optional<Advertisement> advertisementList = advertisementService.getAd(adId);
+    @GetMapping("/ads/{adId}")
+    public Object getAdList(@PathVariable Long adId, HttpServletRequest request, @RequestParam(required = false) Boolean isTrueView) {
+        String ipAddress = request.getRemoteAddr();
+        Optional<Advertisement> advertisementList = advertisementService.getAd(adId, ipAddress, isTrueView != null && isTrueView);
         if (advertisementList.isEmpty()) {
             return ResponseEntity.notFound();
         }

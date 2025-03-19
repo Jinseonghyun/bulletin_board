@@ -1,13 +1,19 @@
 package com.code.backend.service;
 
 import com.code.backend.dto.AdvertisementDto;
+import com.code.backend.entity.AdViewHistory;
 import com.code.backend.entity.Advertisement;
+import com.code.backend.repository.AdViewHistoryRepository;
 import com.code.backend.repository.AdvertisementRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,11 +24,13 @@ public class AdvertisementService {
 
     private AdvertisementRepository advertisementRepository;
     private RedisTemplate<String, Object> redisTemplate;
+    private AdViewHistoryRepository adViewHistoryRepository;
 
     @Autowired
-    public AdvertisementService(AdvertisementRepository advertisementRepository, RedisTemplate<String, Object> redisTemplate) {
+    public AdvertisementService(AdvertisementRepository advertisementRepository, RedisTemplate<String, Object> redisTemplate, AdViewHistoryRepository adViewHistoryRepository) {
         this.advertisementRepository = advertisementRepository;
         this.redisTemplate = redisTemplate;
+        this.adViewHistoryRepository = adViewHistoryRepository;
     }
 
     @Transactional
@@ -45,11 +53,28 @@ public class AdvertisementService {
         return advertisementRepository.findAll();
     }
 
-    public Optional<Advertisement> getAd(Long adId) {
+    public Optional<Advertisement> getAd(Long adId, String clientIp, Boolean isTrueView) {
+        this.insertAdViewHistory(adId, clientIp, isTrueView);
+
         Object tempObj = redisTemplate.opsForHash().get(REDIS_KEY, adId);
         if (tempObj != null) {
             return Optional.ofNullable((Advertisement) redisTemplate.opsForHash().get(REDIS_KEY, adId));
         }
         return advertisementRepository.findById(adId);
+    }
+
+    private void insertAdViewHistory(Long adId, String clientIp, Boolean isTrueView) {
+        AdViewHistory adViewHistory = new AdViewHistory();
+        adViewHistory.setAdId(adId);
+        adViewHistory.setClientIp(clientIp);
+        adViewHistory.setIsTrueView(isTrueView);
+        adViewHistory.setCreatedDate(LocalDateTime.now());
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Object principal = authentication.getPrincipal();
+        if (!principal.equals("anonymousUser")) {
+            UserDetails userDetails = (UserDetails) principal;
+            adViewHistory.setUsername(userDetails.getUsername());
+        }
+        adViewHistoryRepository.save(adViewHistory);
     }
 }
