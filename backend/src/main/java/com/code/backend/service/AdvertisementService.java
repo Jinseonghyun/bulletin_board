@@ -147,7 +147,7 @@ public class AdvertisementService {
 
         // Aggregation 수행
         Aggregation aggregation = Aggregation.newAggregation(matchStage, groupStage, projectStage);
-        AggregationResults<AdHistoryResult> results = mongoTemplate.aggregate(aggregation, "adClickHistory", AdHistoryResult.class);
+        AggregationResults<AdHistoryResult> results = mongoTemplate.aggregate(aggregation, "adViewHistory", AdHistoryResult.class);
 
         return results.getMappedResults();
     }

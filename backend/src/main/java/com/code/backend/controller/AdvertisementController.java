@@ -66,4 +66,11 @@ public class AdvertisementController {
         advertisementService.insertAdViewStat(result);
         return ResponseEntity.ok(result);
     }
+
+    @GetMapping("/ads/click/history")
+    public ResponseEntity<List<AdHistoryResult>> getAdClickHistory() {
+        List<AdHistoryResult> result = advertisementService.getAdClickHistoryGroupedByAdId();
+        advertisementService.insertAdClickStat(result);
+        return ResponseEntity.ok(result);
+    }
 }
