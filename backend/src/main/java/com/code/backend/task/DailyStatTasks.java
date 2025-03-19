@@ -23,4 +23,10 @@ public class DailyStatTasks {
         List<AdHistoryResult> results = advertisementService.getAdViewHistoryGroupedByAdId();
         advertisementService.insertAdViewStat(results);
     }
+
+    @Scheduled(cron = "0 0 0 * * ?")
+    public void insertAdClickStatAtMidnight() {
+        List<AdHistoryResult> results = advertisementService.getAdClickHistoryGroupedByAdId();
+        advertisementService.insertAdClickStat(results);
+    }
 }

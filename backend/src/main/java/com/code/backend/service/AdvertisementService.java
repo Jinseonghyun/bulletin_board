@@ -2,14 +2,8 @@ package com.code.backend.service;
 
 import com.code.backend.dto.AdHistoryResult;
 import com.code.backend.dto.AdvertisementDto;
-import com.code.backend.entity.AdClickHistory;
-import com.code.backend.entity.AdViewHistory;
-import com.code.backend.entity.AdViewStat;
-import com.code.backend.entity.Advertisement;
-import com.code.backend.repository.AdClickHistoryRepository;
-import com.code.backend.repository.AdViewHistoryRepository;
-import com.code.backend.repository.AdViewStatRepository;
-import com.code.backend.repository.AdvertisementRepository;
+import com.code.backend.entity.*;
+import com.code.backend.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.*;
@@ -38,15 +32,17 @@ public class AdvertisementService {
     private AdClickHistoryRepository adClickHistoryRepository;
     private MongoTemplate mongoTemplate;
     private AdViewStatRepository adViewStatRepository;
+    private AdClickStatRepository adClickStatRepository;
 
     @Autowired
-    public AdvertisementService(AdvertisementRepository advertisementRepository, RedisTemplate<String, Object> redisTemplate, AdViewHistoryRepository adViewHistoryRepository, AdClickHistoryRepository adClickHistoryRepository, MongoTemplate mongoTemplate, AdViewStatRepository adViewStatRepository) {
+    public AdvertisementService(AdvertisementRepository advertisementRepository, RedisTemplate<String, Object> redisTemplate, AdViewHistoryRepository adViewHistoryRepository, AdClickHistoryRepository adClickHistoryRepository, MongoTemplate mongoTemplate, AdViewStatRepository adViewStatRepository, AdClickStatRepository adClickStatRepository) {
         this.advertisementRepository = advertisementRepository;
         this.redisTemplate = redisTemplate;
         this.adViewHistoryRepository = adViewHistoryRepository;
         this.adClickHistoryRepository = adClickHistoryRepository;
         this.mongoTemplate = mongoTemplate;
         this.adViewStatRepository = adViewStatRepository;
+        this.adClickStatRepository = adClickStatRepository;
     }
 
     @Transactional
@@ -198,4 +194,96 @@ public class AdvertisementService {
         }
         adViewStatRepository.saveAll(arrayList);
     }
+
+    public List<AdHistoryResult> getAdClickHistoryGroupedByAdId() {
+        List<AdHistoryResult> usernameResult = this.getAdClickHistoryGroupedByAdIdAndUsername();
+        List<AdHistoryResult> clientipResult = this.getAdClickHistoryGroupedByAdIdAndClientip();
+        HashMap<Long, Long> totalResult = new HashMap<>();
+        for (AdHistoryResult item : usernameResult) {
+            totalResult.put(item.getAdId(), item.getCount());
+        }
+        for (AdHistoryResult item : clientipResult) {
+            totalResult.merge(item.getAdId(), item.getCount(), Long::sum);
+        }
+
+        List<AdHistoryResult> resultList = new ArrayList<>();
+        for (Map.Entry<Long, Long> entry : totalResult.entrySet()) {
+            AdHistoryResult result = new AdHistoryResult();
+            result.setAdId(entry.getKey());
+            result.setCount(entry.getValue());
+            resultList.add(result);
+        }
+        return resultList;
+    }
+
+    private List<AdHistoryResult> getAdClickHistoryGroupedByAdIdAndUsername() {
+        // 어제의 시작과 끝 시간 계산
+        LocalDateTime startOfDay = LocalDateTime.of(LocalDate.now().minusDays(1), LocalTime.MIN).plusHours(9);
+        LocalDateTime endOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MIN).plusHours(9);
+
+        // Match 단계: 어제 날짜에 해당하고, username이 있는 문서 필터링
+        MatchOperation matchStage = Aggregation.match(
+                Criteria.where("createdDate").gte(startOfDay).lt(endOfDay)
+                        .and("username").exists(true)
+        );
+
+        // Group 단계: adId로 그룹화하고 고유한 username 집합을 생성
+        GroupOperation groupStage = Aggregation.group("adId")
+                .addToSet("username").as("uniqueUsernames");
+
+        // Projection 단계: 고유한 username 집합의 크기를 count로 계산
+        ProjectionOperation projectStage = Aggregation.project()
+                .andExpression("_id").as("adId")
+                .andExpression("size(uniqueUsernames)").as("count");
+
+        // Aggregation 수행
+        Aggregation aggregation = Aggregation.newAggregation(matchStage, groupStage, projectStage);
+        AggregationResults<AdHistoryResult> results = mongoTemplate.aggregate(aggregation, "adClickHistory", AdHistoryResult.class);
+
+        return results.getMappedResults();
+    }
+
+    private List<AdHistoryResult> getAdClickHistoryGroupedByAdIdAndClientip() {
+        // 어제의 시작과 끝 시간 계산
+        LocalDateTime startOfDay = LocalDateTime.of(LocalDate.now().minusDays(1), LocalTime.MIN).plusHours(9);
+        LocalDateTime endOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MIN).plusHours(9);
+
+        // Match 단계: 어제 날짜에 해당하고, username이 있는 문서 필터링
+        MatchOperation matchStage = Aggregation.match(
+                Criteria.where("createdDate").gte(startOfDay).lt(endOfDay)
+                        .and("username").exists(false)
+        );
+
+        // Group 단계: adId로 그룹화하고 고유한 username 집합을 생성
+        GroupOperation groupStage = Aggregation.group("adId")
+                .addToSet("clientIp").as("uniqueClientIp");
+
+        // Projection 단계: 고유한 username 집합의 크기를 count로 계산
+        ProjectionOperation projectStage = Aggregation.project()
+                .andExpression("_id").as("adId")
+                .andExpression("size(uniqueClientIp)").as("count");
+
+        // Aggregation 수행
+        Aggregation aggregation = Aggregation.newAggregation(matchStage, groupStage, projectStage);
+        AggregationResults<AdHistoryResult> results = mongoTemplate.aggregate(aggregation, "adClickHistory", AdHistoryResult.class);
+
+        return results.getMappedResults();
+    }
+
+    public void insertAdClickStat(List<AdHistoryResult> result) {
+        ArrayList<AdClickStat> arrayList = new ArrayList<>();
+        for (AdHistoryResult item : result) {
+            AdClickStat adClickStat = new AdClickStat();
+            adClickStat.setAdId(item.getAdId());
+            adClickStat.setCount(item.getCount());
+            // yyyy-MM-dd 형식의 DateTimeFormatter 생성
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            // LocalDateTime을 yyyy-MM-dd 형식의 문자열로 변환
+            String formattedDate = LocalDateTime.now().minusDays(1).format(formatter);
+            adClickStat.setDt(formattedDate);
+            arrayList.add(adClickStat);
+        }
+        adClickStatRepository.saveAll(arrayList);
+    }
+
 }
