@@ -1,6 +1,6 @@
 package com.code.backend.service;
 
-import com.code.backend.entity.ArticleNotification;
+import com.code.backend.pojo.ArticleNotification;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 

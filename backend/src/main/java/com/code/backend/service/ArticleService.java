@@ -3,7 +3,7 @@ package com.code.backend.service;
 import com.code.backend.dto.EditArticleDto;
 import com.code.backend.dto.WriteArticleDto;
 import com.code.backend.entity.Article;
-import com.code.backend.entity.ArticleNotification;
+import com.code.backend.pojo.ArticleNotification;
 import com.code.backend.entity.Board;
 import com.code.backend.entity.User;
 import com.code.backend.exception.ForbiddenException;

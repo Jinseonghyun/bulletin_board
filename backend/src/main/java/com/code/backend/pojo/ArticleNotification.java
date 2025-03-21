@@ -1,4 +1,4 @@
-package com.code.backend.entity;
+package com.code.backend.pojo;
 
 import lombok.Data;
 import lombok.Getter;
