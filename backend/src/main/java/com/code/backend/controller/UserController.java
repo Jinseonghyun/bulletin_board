@@ -2,6 +2,7 @@ package com.code.backend.controller;
 
 import com.code.backend.dto.SignUpUser;
 import com.code.backend.entity.User;
+import com.code.backend.entity.UserNotificationHistory;
 import com.code.backend.jwt.JwtUtil;
 import com.code.backend.service.CustomUserDetailService;
 import com.code.backend.service.JwtBlacklistService;
@@ -126,5 +127,10 @@ public class UserController {
     @ResponseStatus(HttpStatus.OK)
     public void readHistory(@RequestParam String historyId) {
         userNotificationHistoryService.readNotification(historyId);
+    }
+
+    @GetMapping("/history")
+    public ResponseEntity<List<UserNotificationHistory>> getHistoryList() {
+        return ResponseEntity.ok(userNotificationHistoryService.getNotificationList());
     }
 }
