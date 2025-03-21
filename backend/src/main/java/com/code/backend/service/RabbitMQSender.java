@@ -1,6 +1,6 @@
 package com.code.backend.service;
 
-import com.code.backend.pojo.ArticleNotification;
+import com.code.backend.pojo.WriteArticle;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 
@@ -13,7 +13,7 @@ public class RabbitMQSender {
         this.rabbitTemplate = rabbitTemplate;
     }
 
-    public void send(ArticleNotification articleNotification) {
-        rabbitTemplate.convertAndSend("code-notification", articleNotification.toString());
+    public void send(WriteArticle writeArticle) {
+        rabbitTemplate.convertAndSend("code-notification", writeArticle.toString());
     }
 }

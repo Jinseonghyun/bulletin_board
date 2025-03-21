@@ -3,7 +3,7 @@ package com.code.backend.service;
 import com.code.backend.dto.EditArticleDto;
 import com.code.backend.dto.WriteArticleDto;
 import com.code.backend.entity.Article;
-import com.code.backend.pojo.ArticleNotification;
+import com.code.backend.pojo.WriteArticle;
 import com.code.backend.entity.Board;
 import com.code.backend.entity.User;
 import com.code.backend.exception.ForbiddenException;
@@ -79,10 +79,10 @@ public class ArticleService {
         article.setContent(dto.getContent());
         articleRepository.save(article);
         this.indexArticle(article);
-        ArticleNotification articleNotification = new ArticleNotification();
-        articleNotification.setArticleId(article.getId());
-        articleNotification.setUserId(author.get().getId());
-        rabbitMQSender.send(articleNotification);
+        WriteArticle writeArticle = new WriteArticle();
+        writeArticle.setArticleId(article.getId());
+        writeArticle.setUserId(author.get().getId());
+        rabbitMQSender.send(writeArticle);
         return article;
     }
 

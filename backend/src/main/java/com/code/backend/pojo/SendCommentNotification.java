@@ -7,8 +7,8 @@ import lombok.Setter;
 @Data
 @Getter
 @Setter
-public class ArticleNotification {
-    private String type = "write_article";
-    private Long articleId;
+public class SendCommentNotification {
+    private String type = "send_comment_notification";
+    private Long commentId;
     private Long userId;
 }
