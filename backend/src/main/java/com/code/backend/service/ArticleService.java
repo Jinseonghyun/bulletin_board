@@ -3,6 +3,7 @@ package com.code.backend.service;
 import com.code.backend.dto.EditArticleDto;
 import com.code.backend.dto.WriteArticleDto;
 import com.code.backend.entity.Article;
+import com.code.backend.pojo.WriteArticle;
 import com.code.backend.entity.Board;
 import com.code.backend.entity.User;
 import com.code.backend.exception.ForbiddenException;
@@ -38,15 +39,17 @@ public class ArticleService {
 
     private final ElasticSearchService elasticSearchService;
     private final ObjectMapper objectMapper;
+    private final RabbitMQSender rabbitMQSender;
 
     @Autowired
     public ArticleService(BoardRepository boardRepository, ArticleRepository articleRepository, UserRepository userRepository,
-                          ElasticSearchService elasticSearchService, ObjectMapper objectMapper) {
+                          ElasticSearchService elasticSearchService, ObjectMapper objectMapper, RabbitMQSender rabbitMQSender) {
         this.boardRepository = boardRepository;
         this.articleRepository = articleRepository;
         this.userRepository = userRepository;
         this.elasticSearchService = elasticSearchService;
         this.objectMapper = objectMapper;
+        this.rabbitMQSender = rabbitMQSender;
     }
 
     @Transactional
@@ -76,6 +79,10 @@ public class ArticleService {
         article.setContent(dto.getContent());
         articleRepository.save(article);
         this.indexArticle(article);
+        WriteArticle writeArticle = new WriteArticle();
+        writeArticle.setArticleId(article.getId());
+        writeArticle.setUserId(author.get().getId());
+        rabbitMQSender.send(writeArticle);
         return article;
     }
 

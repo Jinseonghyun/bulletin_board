@@ -2,9 +2,11 @@ package com.code.backend.controller;
 
 import com.code.backend.dto.SignUpUser;
 import com.code.backend.entity.User;
+import com.code.backend.entity.UserNotificationHistory;
 import com.code.backend.jwt.JwtUtil;
 import com.code.backend.service.CustomUserDetailService;
 import com.code.backend.service.JwtBlacklistService;
+import com.code.backend.service.UserNotificationHistoryService;
 import com.code.backend.service.UserService;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.servlet.http.Cookie;
@@ -15,7 +17,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -36,14 +37,16 @@ public class UserController {
     private final JwtUtil jwtUtil;
     private final CustomUserDetailService userDetailService;
     private final JwtBlacklistService jwtBlacklistService;
+    private final UserNotificationHistoryService userNotificationHistoryService;
 
     @Autowired
-    public UserController(UserService userService, AuthenticationManager authenticationManager, JwtUtil jwtUtil, CustomUserDetailService userDetailService, JwtBlacklistService jwtBlacklistService) {
+    public UserController(UserService userService, AuthenticationManager authenticationManager, JwtUtil jwtUtil, CustomUserDetailService userDetailService, JwtBlacklistService jwtBlacklistService, UserNotificationHistoryService userNotificationHistoryService) {
         this.userService = userService;
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.userDetailService = userDetailService;
         this.jwtBlacklistService = jwtBlacklistService;
+        this.userNotificationHistoryService = userNotificationHistoryService;
     }
 
     @PostMapping("/")
@@ -118,5 +121,16 @@ public class UserController {
         if (!jwtUtil.validateToken(token)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Token is not validation");
         }
+    }
+
+    @PostMapping("/history")
+    @ResponseStatus(HttpStatus.OK)
+    public void readHistory(@RequestParam String historyId) {
+        userNotificationHistoryService.readNotification(historyId);
+    }
+
+    @GetMapping("/history")
+    public ResponseEntity<List<UserNotificationHistory>> getHistoryList() {
+        return ResponseEntity.ok(userNotificationHistoryService.getNotificationList());
     }
 }

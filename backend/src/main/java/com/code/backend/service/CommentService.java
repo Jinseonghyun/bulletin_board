@@ -2,20 +2,20 @@ package com.code.backend.service;
 
 import com.code.backend.dto.EditCommentDto;
 import com.code.backend.dto.WriteCommentDto;
-import com.code.backend.entity.Article;
-import com.code.backend.entity.Board;
-import com.code.backend.entity.Comment;
-import com.code.backend.entity.User;
+import com.code.backend.entity.*;
 import com.code.backend.exception.ForbiddenException;
 import com.code.backend.exception.RateLimitException;
 import com.code.backend.exception.ResourceNotFoundException;
+import com.code.backend.pojo.WriteComment;
 import com.code.backend.repository.ArticleRepository;
 import com.code.backend.repository.BoardRepository;
 import com.code.backend.repository.CommentRepository;
 import com.code.backend.repository.UserRepository;
+import com.code.backend.task.DailyHotArticleTasks;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -42,18 +42,22 @@ public class CommentService {
 
     private final ElasticSearchService elasticSearchService;
     private final ObjectMapper objectMapper;
+    private final RabbitMQSender rabbitMQSender;
 
+    private RedisTemplate<String, Object> redisTemplate;
 
 
     @Autowired
     public CommentService(BoardRepository boardRepository, ArticleRepository articleRepository, UserRepository userRepository, CommentRepository commentRepository,
-                          ElasticSearchService elasticSearchService, ObjectMapper objectMapper) {
+                          ElasticSearchService elasticSearchService, ObjectMapper objectMapper, RabbitMQSender rabbitMQSender, RedisTemplate<String, Object> redisTemplate) {
         this.boardRepository = boardRepository;
         this.articleRepository = articleRepository;
         this.userRepository = userRepository;
         this.commentRepository = commentRepository;
         this.elasticSearchService = elasticSearchService;
         this.objectMapper = objectMapper;
+        this.rabbitMQSender = rabbitMQSender;
+        this.redisTemplate = redisTemplate;
     }
 
     @Transactional
@@ -88,6 +92,9 @@ public class CommentService {
         comment.setAuthor(author.get());
         comment.setContent(dto.getContent());
         commentRepository.save(comment);
+        WriteComment writeComment = new WriteComment();
+        writeComment.setCommentId(comment.getId());
+        rabbitMQSender.send(writeComment);
         return comment;
     }
 
@@ -201,6 +208,24 @@ public class CommentService {
     @Async
     @Transactional
     protected CompletableFuture<Article> getArticle(Long boardId, Long articleId) throws JsonProcessingException {
+        Object yesterdayHotArticleTempObj = redisTemplate.opsForHash().get(DailyHotArticleTasks.YESTERDAY_REDIS_KEY + articleId, articleId);
+        Object weekHotArticleTempObj = redisTemplate.opsForHash().get(DailyHotArticleTasks.WEEK_REDIS_KEY + articleId, articleId);
+        if (yesterdayHotArticleTempObj != null || weekHotArticleTempObj != null) {
+            HotArticle hotArticle = (HotArticle) (yesterdayHotArticleTempObj != null ? yesterdayHotArticleTempObj : weekHotArticleTempObj);
+            Article article = new Article();
+            article.setId(hotArticle.getId());
+            article.setTitle(hotArticle.getTitle());
+            article.setContent(hotArticle.getContent());
+            User user = new User();
+            user.setUsername(hotArticle.getAuthorName());
+            article.setAuthor(user);
+            article.setCreatedDate(hotArticle.getCreatedDate());
+            article.setUpdatedDate(hotArticle.getUpdatedDate());
+            article.setViewCount(hotArticle.getViewCount());
+            return CompletableFuture.completedFuture(article);
+        }
+
+        // redis에 없으면 mysql에서 조회
         Optional<Board> board = boardRepository.findById(boardId);
         if (board.isEmpty()) {
             throw new ResourceNotFoundException("board not found");

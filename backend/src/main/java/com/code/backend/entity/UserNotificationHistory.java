@@ -7,21 +7,25 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 
-@Document(collection = "adViewHistory")
+@Document(collection = "UserNotificationHistory")
 @Getter
 @Setter
-public class AdViewHistory {
+public class UserNotificationHistory {
 
     @Id
     private String id;
 
-    private Long adId;
+    private String title;
 
-    private String username;
+    private String content;
 
-    private String clientIp;
+    private Long noticeId;
 
-    private Boolean isTrueView = false;
+    private Long userId;
+
+    private Boolean isRead = false;
 
     private LocalDateTime createdDate = LocalDateTime.now();
+
+    private LocalDateTime updatedDate = LocalDateTime.now();
 }

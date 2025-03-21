@@ -11,6 +11,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -35,6 +36,10 @@ public class User implements UserDetails{
     @Column(nullable = false)
     private String email;
 
+    @Column(columnDefinition = "json")
+    @Convert(converter = DeviceListConverter.class)
+    private List<Device> deviceList = new ArrayList<>();
+
     private LocalDateTime lastLogin;
 
     @CreatedDate
@@ -47,6 +52,9 @@ public class User implements UserDetails{
     @PrePersist
     protected void onCreate() {
         this.createdDate = LocalDateTime.now();
+        if (deviceList == null) {
+            deviceList = new ArrayList<>();
+        }
     }
 
     @PreUpdate

@@ -70,6 +70,17 @@ services:
       - "27017:27017"
     volumes:
       - mongo-data:/data/db
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"     # RabbitMQ 서버 포트
+      - "15672:15672"   # 관리 콘솔 포트
+    environment:
+      RABBITMQ_DEFAULT_USER: code-user
+      RABBITMQ_DEFAULT_PASS: code1!
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
 
 volumes:
   db_data:
@@ -77,3 +88,5 @@ volumes:
     driver: local
   redis-data:
   mongo-data:
+  rabbitmq_data:
+    driver: local
