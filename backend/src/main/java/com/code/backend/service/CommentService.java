@@ -9,6 +9,7 @@ import com.code.backend.entity.User;
 import com.code.backend.exception.ForbiddenException;
 import com.code.backend.exception.RateLimitException;
 import com.code.backend.exception.ResourceNotFoundException;
+import com.code.backend.pojo.WriteComment;
 import com.code.backend.repository.ArticleRepository;
 import com.code.backend.repository.BoardRepository;
 import com.code.backend.repository.CommentRepository;
@@ -42,18 +43,20 @@ public class CommentService {
 
     private final ElasticSearchService elasticSearchService;
     private final ObjectMapper objectMapper;
+    private final RabbitMQSender rabbitMQSender;
 
 
 
     @Autowired
     public CommentService(BoardRepository boardRepository, ArticleRepository articleRepository, UserRepository userRepository, CommentRepository commentRepository,
-                          ElasticSearchService elasticSearchService, ObjectMapper objectMapper) {
+                          ElasticSearchService elasticSearchService, ObjectMapper objectMapper, RabbitMQSender rabbitMQSender) {
         this.boardRepository = boardRepository;
         this.articleRepository = articleRepository;
         this.userRepository = userRepository;
         this.commentRepository = commentRepository;
         this.elasticSearchService = elasticSearchService;
         this.objectMapper = objectMapper;
+        this.rabbitMQSender = rabbitMQSender;
     }
 
     @Transactional
@@ -88,6 +91,9 @@ public class CommentService {
         comment.setAuthor(author.get());
         comment.setContent(dto.getContent());
         commentRepository.save(comment);
+        WriteComment writeComment = new WriteComment();
+        writeComment.setCommentId(comment.getId());
+        rabbitMQSender.send(writeComment);
         return comment;
     }
 
