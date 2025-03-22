@@ -50,7 +50,6 @@
 
 
 ### 프레임워크 및 기술 스택
----
 - JAVA, Spring
 - Spring Boot
 - Spring Data JPA
@@ -61,7 +60,6 @@
 - Swagger
 
 ### DB 및 데이터 스트리밍 플랫폼
----
 - Redis
 - MySQL
 - MongoDB
@@ -69,12 +67,10 @@
 - Elasticearch
 
 ### 모니터링용 대시보드
----
 - Logstash
 - Kibana
 
 ### 테스트 및 DevOps
----
 - AWS EC2
 - Docker
 - Locust
